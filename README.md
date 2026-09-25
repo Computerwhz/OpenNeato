@@ -9,6 +9,8 @@
 
 # OpenNeato
 
+## Uses HA component from https://github.com/Leicas/OpenNeato
+
 Open-source replacement for Neato's discontinued cloud and mobile app. An ESP32 bridge communicates with
 Botvac robots (D3-D7) over UART and exposes a local web UI over WiFi — no cloud, no app, no account required.
 
