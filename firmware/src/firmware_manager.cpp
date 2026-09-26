@@ -8,7 +8,7 @@ FirmwareManager::FirmwareManager(DataLogger& logger) : LoopTask(250), dataLogger
 // which is a different enum from esp_chip_info_t::model (esp_chip_model_t).
 // They happen to match for C3 (5) and S3 (9), but not for the original ESP32
 // (header=0, model=1) or H2. Translate explicitly before comparing.
-bool FirmwareManager::validateChip(uint8_t *data, size_t len) {
+bool FirmwareManager::validateChip(const uint8_t *data, size_t len) {
     if (len < 16) {
         return true; // Not enough data yet, defer validation
     }

@@ -32,7 +32,7 @@ private:
 
     DataLogger& dataLogger;
 
-    bool validateChip(uint8_t *data, size_t len);
+    bool validateChip(const uint8_t *data, size_t len);
 
     bool updateInProgress = false;
     bool chipValidated = false;

@@ -1,3 +1,4 @@
+import { useAuth } from "../auth";
 import { useCallback, useEffect, useRef, useState } from "preact/hooks";
 import { api } from "../api";
 import alertSvg from "../assets/icons/alert.svg?raw";
@@ -41,19 +42,21 @@ interface StatusInfo {
 
 function statusInfo(s: string): StatusInfo {
     if (s.includes("CLEANINGRUNNING")) return { label: "Cleaning", color: "green", icon: "sparkle" };
-    if (s.includes("CLEANINGPAUSED")) return { label: "Paused", color: "amber", icon: "alert" };
+    if (s.includes("CLEANINGPAUSED")) return { label: "Paused", color: "amber", icon: "pause" };
     if (s.includes("CLEANINGSUSPENDED")) return { label: "Recharging", color: "amber", icon: "bolt" };
     if (s.includes("MANUALCLEANING")) return { label: "Cleaning", color: "green", icon: "sparkle" };
-    if (s.includes("DOCKING")) return { label: "Docking", color: "amber", icon: "bolt" };
-    return { label: "Active", color: "green", icon: "check" };
+    if (s.includes("DOCKING")) return { label: "Docking", color: "amber", icon: "dock" };
+    return { label: "Standby", color: "amber", icon: "idle" };
 }
 
 const STATUS_ICONS: Record<string, string> = {
+    dock: dockSvg,
     check: checkSvg,
     sparkle: sparkleSvg,
     alert: alertSvg,
     bolt: boltSvg,
     manual: manualSvg,
+    idle: idleSvg,
 };
 
 const MODE_ICONS: Record<string, string> = {
@@ -63,6 +66,7 @@ const MODE_ICONS: Record<string, string> = {
     bolt: boltSvg,
     alert: alertSvg,
     manual: manualSvg,
+    dock: dockSvg,
 };
 
 function modeInfo(
@@ -74,7 +78,7 @@ function modeInfo(
 ): StatusInfo {
     if (isManual) return { label: "Manual", color: "blue", icon: "manual" };
     if (charging) return { label: "Charging", color: "amber", icon: "bolt" };
-    if (docked) return { label: "Docked", color: "amber", icon: "bolt" };
+    if (docked) return { label: "Docked", color: "green", icon: "dock" };
     if (isSpot) return { label: "Spot", color: "blue", icon: "spot" };
     if (isCleaning) return { label: "House", color: "blue", icon: "house" };
     return { label: "Idle", color: "green", icon: "idle" };
@@ -121,6 +125,8 @@ interface DashboardViewProps {
 
 export function DashboardView({ firmware, state, isManual, updateInfo, robotReady, identifying }: DashboardViewProps) {
     const { t, formatSystemTime } = useI18n();
+    const { role } = useAuth();
+    const canControl = role !== "Viewer";
     const navigate = useNavigate();
     const charger = usePolling<ChargerData>(api.getCharger, 5000);
     const error = usePolling<ErrorData>(api.getError, 2000);
@@ -243,6 +249,7 @@ export function DashboardView({ firmware, state, isManual, updateInfo, robotRead
                         type="button"
                         class="header-right-btn"
                         aria-label={t("Settings")}
+                        disabled={role !== "Admin"}
                         onClick={() => navigate("/settings")}
                     >
                         <Icon svg={gearSvg} />
@@ -313,7 +320,12 @@ export function DashboardView({ firmware, state, isManual, updateInfo, robotRead
 
             {schedule.data?.enabled && (
                 <div class="schedule-banner">
-                    <button type="button" class="schedule-banner-main" onClick={() => navigate("/schedule")}>
+                    <button
+                        type="button"
+                        class="schedule-banner-main"
+                        disabled={!canControl}
+                        onClick={() => navigate("/schedule")}
+                    >
                         <Icon svg={clockSvg} />
                         <span>
                             {nextSchedule
@@ -326,7 +338,7 @@ export function DashboardView({ firmware, state, isManual, updateInfo, robotRead
                             type="button"
                             class={`schedule-skip-btn${skipPending ? " pending" : ""}`}
                             onClick={handleSkipNextClean}
-                            disabled={skipPending}
+                            disabled={!canControl || skipPending}
                         >
                             {t(skipNextClean ? "Cancel skip" : "Skip clean")}
                         </button>
@@ -421,7 +433,7 @@ export function DashboardView({ firmware, state, isManual, updateInfo, robotRead
                                 type="button"
                                 class={`action-btn primary${pending ? " pending" : ""}`}
                                 onClick={() => handleAction(isPaused ? api.cleanHouse : api.cleanPause)}
-                                disabled={!robotReady || offline || pending}
+                                disabled={!canControl || !robotReady || offline || pending}
                             >
                                 <Icon svg={isPaused ? playSvg : pauseSvg} />
                                 {t(isPaused ? "Resume" : "Pause")}
@@ -430,7 +442,7 @@ export function DashboardView({ firmware, state, isManual, updateInfo, robotRead
                                 type="button"
                                 class={`action-btn${pending ? " pending" : ""}`}
                                 onClick={() => handleAction(api.cleanDock)}
-                                disabled={!robotReady || offline || pending}
+                                disabled={!canControl || !robotReady || offline || pending}
                             >
                                 <Icon svg={dockSvg} />
                                 <T>Dock</T>
@@ -439,7 +451,7 @@ export function DashboardView({ firmware, state, isManual, updateInfo, robotRead
                                 type="button"
                                 class={`action-btn${pending ? " pending" : ""}`}
                                 onClick={() => handleAction(api.cleanStop)}
-                                disabled={!robotReady || offline || pending}
+                                disabled={!canControl || !robotReady || offline || pending}
                             >
                                 <Icon svg={stopSvg} />
                                 <T>Stop</T>
@@ -452,7 +464,15 @@ export function DashboardView({ firmware, state, isManual, updateInfo, robotRead
                                 type="button"
                                 class={`action-btn primary${pending ? " pending" : ""}`}
                                 onClick={() => handleAction(api.cleanHouse)}
-                                disabled={!robotReady || offline || isDocking || isManual || pending || hasRobotError}
+                                disabled={
+                                    !canControl ||
+                                    !robotReady ||
+                                    offline ||
+                                    isDocking ||
+                                    isManual ||
+                                    pending ||
+                                    hasRobotError
+                                }
                             >
                                 <Icon svg={houseSvg} />
                                 <T>House</T>
@@ -461,7 +481,15 @@ export function DashboardView({ firmware, state, isManual, updateInfo, robotRead
                                 type="button"
                                 class={`action-btn${pending ? " pending" : ""}`}
                                 onClick={() => handleAction(api.cleanSpot)}
-                                disabled={!robotReady || offline || isDocking || isManual || pending || hasRobotError}
+                                disabled={
+                                    !canControl ||
+                                    !robotReady ||
+                                    offline ||
+                                    isDocking ||
+                                    isManual ||
+                                    pending ||
+                                    hasRobotError
+                                }
                             >
                                 <Icon svg={spotSvg} />
                                 <T>Spot</T>
@@ -480,6 +508,7 @@ export function DashboardView({ firmware, state, isManual, updateInfo, robotRead
                                             })
                                 }
                                 disabled={
+                                    !canControl ||
                                     !robotReady ||
                                     offline ||
                                     (pending && !isManual) ||

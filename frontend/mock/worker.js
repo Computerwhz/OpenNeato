@@ -371,6 +371,8 @@ async function handleApi(request, env) {
         response = toWorkerResponse(
             await session.api.handle({
                 method: request.method,
+                cookie: request.headers.get("Cookie"),
+                authorization: request.headers.get("Authorization"),
                 path: url.pathname,
                 query,
                 bytes,

@@ -899,13 +899,13 @@ String computeSKey(const String& serialNumber) {
     uint8_t ks[12];
     int ii = 0;
     j = 0;
-    for (int k = 0; k < 12; k++) {
+    for (auto& byte: ks) {
         ii = (ii + 1) & 0xFF;
         j = (j + s[ii]) & 0xFF;
         uint8_t tmp = s[ii];
         s[ii] = s[j];
         s[j] = tmp;
-        ks[k] = s[(s[ii] + s[j]) & 0xFF];
+        byte = s[(s[ii] + s[j]) & 0xFF];
     }
 
     // XOR keystream with MAC characters, hex-encode

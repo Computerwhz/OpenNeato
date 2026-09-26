@@ -95,6 +95,7 @@ public:
     void logRequest(WebRequestMethodComposite method, const String& path, int status, unsigned long ms);
     void logWifi(const String& event, const std::vector<Field>& extra = {});
     void logOta(const String& event, const std::vector<Field>& extra = {});
+    void logAuth(const String& event, const std::vector<Field>& extra = {});
     void logNtp(const String& event, const std::vector<Field>& extra = {});
     void logGenericEvent(const String& category, const std::vector<Field>& extra = {});
     void logNotification(const String& category, const String& message, bool success);

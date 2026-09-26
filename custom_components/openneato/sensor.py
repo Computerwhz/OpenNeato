@@ -61,6 +61,36 @@ class OpenNeatoSensorEntityDescription(SensorEntityDescription):
     field: str = ""
     value_fn: Any = None
 
+def _ui_code(data: Any) -> int | None:
+    try:
+        return int(data.get("errorCode"))
+    except (AttributeError, TypeError, ValueError):
+        return None
+
+
+def _alert_code(data: Any) -> Any:
+    if data.get("hasError") and data.get("kind") == "warning":
+        return data.get("errorCode")
+    return None
+
+
+def _alert_message(data: Any) -> Any:
+    if data.get("hasError") and data.get("kind") == "warning":
+        return data.get("displayMessage")
+    return None
+
+
+def _error_code(data: Any) -> Any:
+    if data.get("hasError") and data.get("kind") == "error":
+        return data.get("errorCode")
+    return None
+
+
+def _error_message(data: Any) -> Any:
+    if data.get("hasError") and data.get("kind") == "error":
+        return data.get("displayMessage")
+    return None
+
 
 SENSOR_DESCRIPTIONS: tuple[OpenNeatoSensorEntityDescription, ...] = (
     # ── Charger ─────────────────────────────────────────────────────────
@@ -195,29 +225,50 @@ SENSOR_DESCRIPTIONS: tuple[OpenNeatoSensorEntityDescription, ...] = (
         icon="mdi:timer-sand",
         entity_category=EntityCategory.DIAGNOSTIC,
     ),
-    # ── Error ───────────────────────────────────────────────────────────
-    OpenNeatoSensorEntityDescription(
-        key="error_code",
-        translation_key="error_code",
-        name="Error code",
-        section="error",
-        field="errorCode",
-        # 200 is UI_ALERT_INVALID — the robot's documented "no error" sentinel
-        # (docs/neato-serial-protocol.md). Reporting it verbatim made the
-        # dashboard read "Error code 200" on a perfectly healthy robot.
-        value_fn=lambda v: None if v in (200, "200") else v,
-        icon="mdi:alert-circle",
-        entity_category=EntityCategory.DIAGNOSTIC,
-    ),
-    OpenNeatoSensorEntityDescription(
-        key="error_message",
-        translation_key="error_message",
-        name="Error message",
-        section="error",
-        field="displayMessage",
-        icon="mdi:alert-circle-outline",
-        entity_category=EntityCategory.DIAGNOSTIC,
-    ),
+# ── Error ───────────────────────────────────────────────────────────
+OpenNeatoSensorEntityDescription(
+    key="alert_code",
+    translation_key="alert_code",
+    name="Alert code",
+    section="error",
+    field="",
+    value_fn=_alert_code,
+    icon="mdi:alert",
+    entity_category=EntityCategory.DIAGNOSTIC,
+),
+
+OpenNeatoSensorEntityDescription(
+    key="alert_message",
+    translation_key="alert_message",
+    name="Alert message",
+    section="error",
+    field="",
+    value_fn=_alert_message,
+    icon="mdi:alert-outline",
+    entity_category=EntityCategory.DIAGNOSTIC,
+),
+
+OpenNeatoSensorEntityDescription(
+    key="error_code",
+    translation_key="error_code",
+    name="Error code",
+    section="error",
+    field="",
+    value_fn=_error_code,
+    icon="mdi:alert-circle",
+    entity_category=EntityCategory.DIAGNOSTIC,
+),
+
+OpenNeatoSensorEntityDescription(
+    key="error_message",
+    translation_key="error_message",
+    name="Error message",
+    section="error",
+    field="",
+    value_fn=_error_message,
+    icon="mdi:alert-circle-outline",
+    entity_category=EntityCategory.DIAGNOSTIC,
+),
     # ── System ──────────────────────────────────────────────────────────
     OpenNeatoSensorEntityDescription(
         key="system_rssi",

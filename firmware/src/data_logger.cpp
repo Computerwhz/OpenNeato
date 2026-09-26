@@ -482,6 +482,12 @@ void DataLogger::logOta(const String& event, const std::vector<Field>& extra) {
     logEvent("ota", fields);
 }
 
+void DataLogger::logAuth(const String& event, const std::vector<Field>& extra) {
+    std::vector<Field> fields = {{"event", event, FIELD_STRING}};
+    fields.insert(fields.end(), extra.begin(), extra.end());
+    logEvent("auth", fields);
+}
+
 void DataLogger::logNtp(const String& event, const std::vector<Field>& extra) {
     std::vector<Field> fields = {{"event", event, FIELD_STRING}};
     fields.insert(fields.end(), extra.begin(), extra.end());

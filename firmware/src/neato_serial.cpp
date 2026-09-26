@@ -74,7 +74,7 @@ void NeatoSerial::initSKey() {
         LOG("NEATO", "Model: %s (supported=%s)", robotModelName.c_str(),
             isSupportedModel(robotModelName) ? "yes" : "no");
         sKey = computeSKey(v.serialNumber);
-        if (sKey.length() > 0) {
+        if (sKey.length() > 0) { // NOLINT(bugprone-branch-clone) LOG branches differ when logging is enabled
             LOG("NEATO", "SKey computed (%d chars) from serial %s", sKey.length(), v.serialNumber.c_str());
         } else {
             LOG("NEATO", "SKey computation failed for serial: %s", v.serialNumber.c_str());

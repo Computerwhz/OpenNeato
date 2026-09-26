@@ -8,7 +8,7 @@ Implementation details belong in code comments, not here.
 
 **OpenNeato** is an open-source replacement for Neato's discontinued cloud and
 mobile app. An ESP32-C3 bridge communicates with Botvac robots (D3-D7) over UART
-and exposes a local web UI over WiFi — no cloud, no app, no account required.
+and exposes a local web UI over WiFi — no cloud or mobile app required. Optional local accounts protect normal Wi-Fi access; authentication defaults to off.
 
 **Standalone system** — no Home Assistant, no cloud, no external dependencies.
 

@@ -1,4 +1,5 @@
 #include "web_server.h"
+#include "auth_manager.h"
 #include "web_assets.h"
 #include "neato_serial.h"
 #include "data_logger.h"
@@ -16,9 +17,10 @@ unsigned long WebServer::lastApiActivity = 0;
 
 WebServer::WebServer(AsyncWebServer& server, NeatoSerial& neato, DataLogger& logger, SystemManager& sys,
                      FirmwareManager& fw, SettingsManager& settings, ManualCleanManager& manual,
-                     NotificationManager& notif, CleaningHistory& history, WiFiManager& wifi, Scheduler& scheduler) :
+                     NotificationManager& notif, CleaningHistory& history, WiFiManager& wifi, Scheduler& scheduler,
+                     AuthManager& auth) :
     server(server), neato(neato), logger(logger), sysMgr(sys), fwMgr(fw), settingsMgr(settings), manualMgr(manual),
-    notifMgr(notif), historyMgr(history), wifiMgr(wifi), scheduler(scheduler) {}
+    notifMgr(notif), historyMgr(history), wifiMgr(wifi), scheduler(scheduler), auth(auth) {}
 
 void WebServer::loggedRoute(const char *path, WebRequestMethodComposite httpMethod, SyncHandler handler) {
     server.on(path, httpMethod, [this, handler](AsyncWebServerRequest *request) {
@@ -32,10 +34,28 @@ void WebServer::loggedRoute(const char *path, WebRequestMethodComposite httpMeth
 void WebServer::loggedBodyRoute(const char *path, WebRequestMethodComposite httpMethod, BodyHandler handler) {
     server.on(
             path, httpMethod, [](AsyncWebServerRequest *request) { /* handled in body callback */ }, nullptr,
-            [this, handler](AsyncWebServerRequest *request, uint8_t *data, size_t len, size_t, size_t) {
+            [this, handler](AsyncWebServerRequest *request, uint8_t *data, size_t len, size_t index, size_t total) {
+                if (!auth.authorize(request))
+                    return;
+                if (total == 0 || total > 8192 || index > total || len > total - index) {
+                    sendError(request, 413, "Request body too large");
+                    return;
+                }
+                if (index == 0)
+                    request->_tempObject = malloc(total);
+                if (!request->_tempObject) {
+                    sendError(request, 503, "Insufficient memory");
+                    return;
+                }
+                auto *body = static_cast<uint8_t *>(request->_tempObject);
+                memcpy(body + index, data, len);
+                if (index + len != total)
+                    return;
                 lastApiActivity = millis();
                 unsigned long startMs = lastApiActivity;
-                int status = handler(request, data, len);
+                int status = handler(request, body, total);
+                free(request->_tempObject);
+                request->_tempObject = nullptr;
                 logger.logRequest(request->method(), request->url().c_str(), status, millis() - startMs);
             });
 }
@@ -56,6 +76,20 @@ void WebServer::sendOk(AsyncWebServerRequest *request) {
 }
 
 void WebServer::begin() {
+    server.addMiddleware([this](AsyncWebServerRequest *request, ArMiddlewareNext next) {
+        if (auth.authorize(request))
+            next();
+    });
+    server.on("/api/auth/settings", HTTP_PUT, [this](AsyncWebServerRequest *request) { auth.handle(request); });
+    server.on("/api/auth/ha-key", HTTP_GET | HTTP_POST | HTTP_DELETE,
+              [this](AsyncWebServerRequest *request) { auth.handle(request); });
+    server.on("/api/auth/login", HTTP_POST, [this](AsyncWebServerRequest *request) { auth.handle(request); });
+    server.on("/api/auth/logout", HTTP_POST, [this](AsyncWebServerRequest *request) { auth.handle(request); });
+    server.on("/api/auth/me", HTTP_GET, [this](AsyncWebServerRequest *request) { auth.handle(request); });
+    server.on("/api/auth/setup", HTTP_POST, [this](AsyncWebServerRequest *request) { auth.handle(request); });
+    server.on("/api/users", HTTP_GET | HTTP_POST | HTTP_PUT | HTTP_DELETE,
+              [this](AsyncWebServerRequest *request) { auth.handle(request); });
+
     // Register all embedded frontend assets from the auto-generated registry
     for (size_t i = 0; i < WEB_ASSETS_COUNT; i++) {
         const WebAsset& asset = WEB_ASSETS[i];
@@ -262,6 +296,36 @@ void WebServer::registerSystemRoutes() {
 
 void WebServer::registerSettingsRoutes() {
 
+    auto scheduleJson = [this]() {
+        std::vector<Field> fields;
+        for (const auto& field: settingsMgr.get().toFields())
+            if (field.key == "scheduleEnabled" || field.key == "tz" || field.key.startsWith("sched"))
+                fields.push_back(field);
+        return fieldsToJson(fields);
+    };
+    loggedRoute("/api/schedule", HTTP_GET, [scheduleJson](AsyncWebServerRequest *request) {
+        request->send(200, "application/json", scheduleJson());
+        return 200;
+    });
+    loggedBodyRoute("/api/schedule", HTTP_PUT,
+                    [this, scheduleJson](AsyncWebServerRequest *request, uint8_t *data, size_t len) {
+                        String body(reinterpret_cast<const char *>(data), len);
+                        auto fields = fieldsFromJson(body);
+                        auto allowed = fieldsFromJson(scheduleJson());
+                        for (const auto& field: fields) {
+                            if (field.key == "tz" || !findField(allowed, field.key.c_str())) {
+                                sendError(request, 403, "Only schedule fields may be changed");
+                                return 403;
+                            }
+                        }
+                        if (fields.empty() || settingsMgr.apply(body) == APPLY_INVALID) {
+                            sendError(request, 400, "Invalid schedule");
+                            return 400;
+                        }
+                        request->send(200, "application/json", scheduleJson());
+                        return 200;
+                    });
+
     // GET /api/settings — all user-configurable settings
     registerGetRoute("/api/settings", settingsMgr, &SettingsManager::get);
 
@@ -351,6 +415,8 @@ void WebServer::registerFirmwareRoutes() {
             // Upload handler (called per chunk)
             [this](AsyncWebServerRequest *request, String filename, size_t index, uint8_t *data, size_t len,
                    bool final) {
+                if (!auth.authorize(request))
+                    return;
                 // First chunk: initialize update session
                 if (!index) {
                     String md5 = request->hasParam("hash") ? request->getParam("hash")->value() : "";
@@ -480,6 +546,8 @@ void WebServer::registerMapRoutes() {
             // Upload handler (called per chunk)
             [this](AsyncWebServerRequest *request, String filename, size_t index, uint8_t *data, size_t len,
                    bool final) {
+                if (!auth.authorize(request))
+                    return;
                 // First chunk: initialize import session
                 if (!index) {
                     if (!historyMgr.beginImport(filename)) {

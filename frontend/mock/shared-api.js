@@ -1,3 +1,4 @@
+import { createMockAuth } from "./auth.js";
 const textEncoder = new TextEncoder();
 
 const defaultRand = (min, max) => Math.floor(Math.random() * (max - min + 1)) + min;
@@ -335,6 +336,7 @@ const extractFirmwarePayload = (bodyBytes) => {
 };
 
 function createMockApi(context) {
+    const authenticate = createMockAuth();
     const rand = context.rand ?? defaultRand;
     const sleep = context.sleep ?? defaultSleep;
 
@@ -347,6 +349,9 @@ function createMockApi(context) {
         const method = request.method;
         const path = request.path;
         const query = request.query;
+
+        const authResponse = await authenticate(request);
+        if (authResponse) return authResponse;
 
         if (state.offline) return { offline: true };
 
@@ -631,7 +636,8 @@ function createMockApi(context) {
             return okResponse();
         }
 
-        if (method === "GET" && path === "/api/settings") return jsonResponse(settingsPayload(state));
+        if (method === "GET" && (path === "/api/settings" || path === "/api/schedule"))
+            return jsonResponse(settingsPayload(state));
 
         if (method === "GET" && path === "/api/schedule/next") {
             return jsonResponse({
@@ -653,7 +659,7 @@ function createMockApi(context) {
             return okResponse();
         }
 
-        if (method === "PUT" && path === "/api/settings") {
+        if (method === "PUT" && (path === "/api/settings" || path === "/api/schedule")) {
             if (faults.settings) {
                 await sleep(rand(200, 400));
                 return errorResponse("NVS write failed: flash error", 500);

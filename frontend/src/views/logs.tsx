@@ -1,3 +1,4 @@
+import { useAuth } from "../auth";
 import { useCallback } from "preact/hooks";
 import backSvg from "../assets/icons/back.svg?raw";
 import { ErrorBannerStack, useErrorStack } from "../components/error-banner";
@@ -11,6 +12,7 @@ export function LogsView() {
     const { t } = useI18n();
     const navigate = useNavigate();
     const path = usePath();
+    const { role } = useAuth();
     const [errors, errorStack] = useErrorStack();
 
     // Derive view mode from URL: /logs = list, /logs/filename = detail
@@ -22,9 +24,9 @@ export function LogsView() {
             navigate("/logs");
             errorStack.clear();
         } else {
-            navigate("/settings");
+            navigate(role === "Admin" ? "/settings" : "/");
         }
-    }, [isDetail, navigate, errorStack]);
+    }, [isDetail, navigate, errorStack, role]);
 
     const handleError = useCallback(
         (msg: string) => {

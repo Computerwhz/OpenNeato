@@ -1,4 +1,5 @@
 import { render } from "preact";
+import { AuthGate } from "./auth";
 import { App } from "./app";
 import "./style.css";
 import { clearUpdateCache } from "./update";
@@ -16,4 +17,10 @@ if (__DEMO_BUILD__) {
 }
 
 const root = document.getElementById("app");
-if (root) render(<App />, root);
+if (root)
+    render(
+        <AuthGate>
+            <App />
+        </AuthGate>,
+        root,
+    );

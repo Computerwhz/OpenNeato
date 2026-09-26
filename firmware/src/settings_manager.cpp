@@ -399,8 +399,8 @@ std::vector<Field> Settings::toFields() const {
             {"autoRestartMinute", String(autoRestartMinute), FIELD_INT},
             {"restartBeforeClean", restartBeforeClean ? "true" : "false", FIELD_BOOL},
     };
-    for (int d = 0; d < SCHEDULE_DAYS; d++) {
-        for (int s = 0; s < SCHEDULE_SLOTS_PER_DAY; s++) {
+    for (int d = 0; d < SCHEDULE_DAYS; d++) { // NOLINT(modernize-loop-convert) day index forms JSON keys
+        for (int s = 0; s < SCHEDULE_SLOTS_PER_DAY; s++) { // NOLINT(modernize-loop-convert) slot index forms JSON keys
             // Slot 0: "sched0Hour", "sched0Min", "sched0On" (backwards compatible)
             // Slot 1: "sched0Slot1Hour", "sched0Slot1Min", "sched0Slot1On"
             String prefix = "sched" + String(d);

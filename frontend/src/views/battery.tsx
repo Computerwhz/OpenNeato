@@ -1,3 +1,4 @@
+import { useAuth } from "../auth";
 import backSvg from "../assets/icons/back.svg?raw";
 import { ErrorBannerStack, useErrorStack } from "../components/error-banner";
 import { Icon } from "../components/icon";
@@ -10,12 +11,13 @@ interface BatteryViewProps {
 
 export function BatteryView({ firmwareSupported }: BatteryViewProps) {
     const { t } = useI18n();
+    const { role } = useAuth();
     const [errors, errorStack] = useErrorStack();
 
     return (
         <>
             <div class="header">
-                <a href="#/settings" class="header-back-btn" aria-label={t("Back")}>
+                <a href={role === "Admin" ? "#/settings" : "#/"} class="header-back-btn" aria-label={t("Back")}>
                     <Icon svg={backSvg} />
                 </a>
                 <h1>

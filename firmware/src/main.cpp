@@ -8,6 +8,7 @@
 #include "system_manager.h"
 #include "settings_manager.h"
 #include "web_server.h"
+#include "auth_manager.h"
 #include "neato_serial.h"
 #include "data_logger.h"
 #include "scheduler.h"
@@ -23,6 +24,7 @@ NeatoSerial neatoSerial;
 SystemManager systemManager(prefs);
 SettingsManager settingsManager(prefs);
 DataLogger dataLogger(neatoSerial, systemManager);
+AuthManager authManager(prefs, dataLogger);
 WiFiManager wifiManager(prefs, dataLogger);
 FirmwareManager firmwareManager(dataLogger);
 Scheduler scheduler(settingsManager, systemManager, neatoSerial, dataLogger, prefs);
@@ -30,7 +32,7 @@ ManualCleanManager manualClean(neatoSerial);
 NotificationManager notifMgr(neatoSerial, settingsManager, dataLogger);
 CleaningHistory cleaningHistory(neatoSerial, dataLogger, systemManager);
 WebServer webServer(server, neatoSerial, dataLogger, systemManager, firmwareManager, settingsManager, manualClean,
-                    notifMgr, cleaningHistory, wifiManager, scheduler);
+                    notifMgr, cleaningHistory, wifiManager, scheduler, authManager);
 
 // Tracks whether web server has been started (may be deferred if WiFi was slow at boot)
 bool webServerStarted = false;
@@ -45,6 +47,7 @@ void setup() {
 
     // Open shared NVS namespace (stays open for the lifetime of the device)
     prefs.begin(NVS_NAMESPACE, false);
+    authManager.begin();
 
     // Setup reset button
     pinMode(RESET_BUTTON_PIN, INPUT_PULLUP);

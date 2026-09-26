@@ -90,8 +90,10 @@ class OpenNeatoVacuum(OpenNeatoEntity, StateVacuumEntity):
         charger_data = self.coordinator.data.get("charger", {})
         error_data = self.coordinator.data.get("error", {})
 
-        # Error takes priority
-        if error_data.get("hasError"):
+        if (
+            error_data.get("hasError")
+            and error_data.get("kind") == "error"
+        ):
             return VacuumActivity.ERROR
 
         ui_state = state_data.get("uiState", "")

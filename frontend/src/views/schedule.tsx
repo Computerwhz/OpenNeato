@@ -126,7 +126,7 @@ export function ScheduleView() {
     const [errors, errorStack] = useErrorStack();
     const [saving, setSaving] = useState(false);
 
-    const { data: settings, loading, error: fetchError } = useFetch(api.getSettings);
+    const { data: settings, loading, error: fetchError } = useFetch(api.getSchedule);
     const { data: system } = useFetch<SystemData>(api.getSystem);
 
     const [enabled, setEnabled] = useState(false);

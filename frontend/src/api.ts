@@ -1,3 +1,4 @@
+import { authFetch } from "./auth";
 import { parseMapData } from "./history-data";
 import type {
     BatteryAnalogData,
@@ -41,7 +42,7 @@ export class ResponseParseError extends Error {
 }
 
 async function get<T>(url: string): Promise<T> {
-    const res = await fetch(url);
+    const res = await authFetch(url);
     if (!res.ok) throw new Error(await parseError(res));
     try {
         return (await res.json()) as T;
@@ -51,17 +52,17 @@ async function get<T>(url: string): Promise<T> {
 }
 
 async function post(url: string): Promise<void> {
-    const res = await fetch(url, { method: "POST" });
+    const res = await authFetch(url, { method: "POST" });
     if (!res.ok) throw new Error(await parseError(res));
 }
 
 async function del(url: string): Promise<void> {
-    const res = await fetch(url, { method: "DELETE" });
+    const res = await authFetch(url, { method: "DELETE" });
     if (!res.ok) throw new Error(await parseError(res));
 }
 
 async function put<T>(url: string, body: unknown): Promise<T> {
-    const res = await fetch(url, {
+    const res = await authFetch(url, {
         method: "PUT",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify(body),
@@ -71,13 +72,13 @@ async function put<T>(url: string, body: unknown): Promise<T> {
 }
 
 async function fetchLogText(name: string): Promise<string> {
-    const res = await fetch(`/api/logs/${name}`);
+    const res = await authFetch(`/api/logs/${name}`);
     if (!res.ok) throw new Error(await parseError(res));
     return res.text();
 }
 
 async function fetchSessionData(filename: string): Promise<MapData[]> {
-    const res = await fetch(`/api/history/${filename}`);
+    const res = await authFetch(`/api/history/${filename}`);
     if (!res.ok) throw new Error(await parseError(res));
     const raw = await res.text();
     if (!raw.trim()) return [];
@@ -88,10 +89,12 @@ function uploadFile(url: string, file: File, onProgress: (pct: number) => void):
     return new Promise((resolve, reject) => {
         const xhr = new XMLHttpRequest();
         xhr.open("POST", url);
+        xhr.setRequestHeader("X-OpenNeato", "1");
         xhr.upload.addEventListener("progress", (e) => {
             if (e.lengthComputable) onProgress(Math.round((e.loaded / e.total) * 100));
         });
         xhr.addEventListener("load", () => {
+            if (xhr.status === 401) window.dispatchEvent(new Event("session-expired"));
             if (xhr.status >= 200 && xhr.status < 300) {
                 resolve();
             } else {
@@ -166,7 +169,8 @@ export const api = {
     importSession: (file: File, onProgress: (pct: number) => void) => importSession(file, onProgress),
     uploadFirmware: (file: File, md5: string, onProgress: (pct: number) => void) =>
         uploadFirmware(file, md5, onProgress),
-    saveSchedule: (patch: Partial<SettingsData>) => put<SettingsData>("/api/settings", patch),
+    getSchedule: () => get<SettingsData>("/api/schedule"),
+    saveSchedule: (patch: Partial<SettingsData>) => put<SettingsData>("/api/schedule", patch),
 
     getUserSettings: () => get<UserSettingsData>("/api/user-settings"),
     setUserSetting: (key: string, value: string) =>

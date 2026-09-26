@@ -1,3 +1,4 @@
+import { useAuth } from "../../auth";
 import { useCallback, useEffect, useState } from "preact/hooks";
 import { api } from "../../api";
 import databaseSvg from "../../assets/icons/database.svg?raw";
@@ -16,6 +17,7 @@ interface LogsListViewProps {
 
 export function LogsListView({ onError }: LogsListViewProps) {
     const { t, formatDateTime, formatBytes } = useI18n();
+    const isAdmin = useAuth().role === "Admin";
     const navigate = useNavigate();
     const [files, setFiles] = useState<LogFileInfo[]>([]);
     const [loading, setLoading] = useState(true);
@@ -91,7 +93,7 @@ export function LogsListView({ onError }: LogsListViewProps) {
                         type="button"
                         class={`logs-delete-all-btn${deletingAll ? " pending" : ""}`}
                         onClick={() => setConfirmTarget("__all__")}
-                        disabled={deletingAll}
+                        disabled={!isAdmin || deletingAll}
                     >
                         <T>Delete All</T>
                     </button>
@@ -136,7 +138,7 @@ export function LogsListView({ onError }: LogsListViewProps) {
                                 type="button"
                                 class={`logs-file-delete${deleting === f.name ? " pending" : ""}`}
                                 onClick={() => setConfirmTarget(f.name)}
-                                disabled={deleting === f.name}
+                                disabled={!isAdmin || deleting === f.name}
                                 aria-label={`${t("Delete")} ${f.name}`}
                             >
                                 <Icon svg={trashSvg} />

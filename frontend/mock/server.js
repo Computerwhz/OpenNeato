@@ -66,6 +66,8 @@ const createRequestAdapter = (req, parsed) => {
     };
     return {
         method: req.method,
+        cookie: req.headers.cookie,
+        authorization: req.headers.authorization,
         path: parsed.pathname,
         query: Object.fromEntries(parsed.searchParams),
         bytes,

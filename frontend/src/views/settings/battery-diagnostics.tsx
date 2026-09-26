@@ -1,3 +1,4 @@
+import { useAuth } from "../../auth";
 import { useCallback, useState } from "preact/hooks";
 import { api } from "../../api";
 import alertSvg from "../../assets/icons/alert.svg?raw";
@@ -35,6 +36,7 @@ function mfgDateLooksUnreliable(version: VersionData | null | undefined): boolea
 
 export function BatteryDiagnostics({ firmwareSupported, errorStack }: BatteryDiagnosticsProps) {
     const { t, formatDuration, formatNumber } = useI18n();
+    const isAdmin = useAuth().role === "Admin";
     const chargerPoll = usePolling<ChargerData>(api.getCharger, 30000);
     const analogPoll = usePolling<BatteryAnalogData>(api.getBatteryAnalog, 30000);
     const warrantyPoll = usePolling<BatteryWarrantyData>(api.getBatteryWarranty, 60000);
@@ -219,7 +221,7 @@ export function BatteryDiagnostics({ firmwareSupported, errorStack }: BatteryDia
                                 type="button"
                                 class={`settings-nav-row${settingNewBattery ? " pending" : ""}`}
                                 onClick={() => setShowNewBatteryConfirm(true)}
-                                disabled={settingNewBattery || !firmwareSupported}
+                                disabled={!isAdmin || settingNewBattery || !firmwareSupported}
                             >
                                 <div class="settings-nav-row-left">
                                     <Icon svg={alertSvg} />

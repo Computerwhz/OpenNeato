@@ -1,3 +1,4 @@
+import accountSvg from "../assets/icons/account.svg?raw";
 import { useCallback, useEffect, useRef, useState } from "preact/hooks";
 import { api } from "../api";
 import alertSvg from "../assets/icons/alert.svg?raw";
@@ -659,6 +660,20 @@ export function SettingsView({
                         errorStack={errorStack}
                     />
                 </SettingsCategory>
+
+                <div class="settings-category">
+                    <button
+                        type="button"
+                        class="settings-category-header"
+                        onClick={() => guardedNavigate("/settings/accounts")}
+                    >
+                        <div class="settings-category-title">
+                            <Icon svg={accountSvg} />
+                            <T>Accounts</T>
+                        </div>
+                        <span class="settings-category-chevron">&rsaquo;</span>
+                    </button>
+                </div>
 
                 <SettingsCategory title={t("Notifications")} icon={bellSvg}>
                     <div class="settings-section">

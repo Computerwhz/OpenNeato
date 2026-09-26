@@ -8,9 +8,10 @@ import logging
 from typing import Any
 
 from homeassistant.core import HomeAssistant
+from homeassistant.exceptions import ConfigEntryAuthFailed
 from homeassistant.helpers.update_coordinator import DataUpdateCoordinator, UpdateFailed
 
-from .api import OpenNeatoApiClient, OpenNeatoConnectionError
+from .api import OpenNeatoApiClient, OpenNeatoAuthError, OpenNeatoPermissionError, OpenNeatoConnectionError
 from .const import DEFAULT_POLL_INTERVAL, DOMAIN
 
 _LOGGER = logging.getLogger(__name__)
@@ -100,6 +101,8 @@ class OpenNeatoCoordinator(DataUpdateCoordinator[dict[str, Any]]):
         critical_failures: list[str] = []
 
         for key, result in zip(keys, results):
+            if isinstance(result, (OpenNeatoAuthError, OpenNeatoPermissionError)):
+                raise ConfigEntryAuthFailed(str(result)) from result
             if isinstance(result, Exception):
                 if isinstance(result, OpenNeatoConnectionError):
                     _LOGGER.warning("Timeout/connection error on %s: %s", key, result)

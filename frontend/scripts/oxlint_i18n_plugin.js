@@ -110,6 +110,10 @@ function literalAttributeText(value) {
     return "";
 }
 
+function normalizePath(value) {
+    return value.replaceAll("\\", "/");
+}
+
 function contextFilename(context) {
     return (
         context.filename ??
@@ -157,9 +161,8 @@ function checkLocaleAlignment(directory = localesDir, root = projectRoot) {
 
             if (onlyLeft.length > 0 || onlyRight.length > 0) {
                 messages.push(
-                    `${path.relative(root, left.filePath)} and ${path.relative(
-                        root,
-                        right.filePath,
+                    `${normalizePath(path.relative(root, left.filePath))} and ${normalizePath(
+                        path.relative(root, right.filePath),
                     )} do not have the same locale keys: ` +
                         `${onlyLeft.length} only in ${left.fileName}, ${onlyRight.length} only in ${right.fileName}.`,
                 );
@@ -176,7 +179,9 @@ function checkLocaleAlignment(directory = localesDir, root = projectRoot) {
             if (!mismatch) continue;
 
             messages.push(
-                `${path.relative(root, left.filePath)} and ${path.relative(root, right.filePath)} key order is not aligned: ` +
+                `${normalizePath(path.relative(root, left.filePath))} and ${normalizePath(
+                    path.relative(root, right.filePath),
+                )} key order is not aligned: ` +
                     `entry ${mismatch.index + 1} is ${JSON.stringify(mismatch.actual)} in ${left.fileName}, ` +
                     `${JSON.stringify(mismatch.expected)} in ${right.fileName}.`,
             );

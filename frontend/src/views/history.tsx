@@ -1,3 +1,4 @@
+import { useAuth } from "../auth";
 import { useCallback, useEffect, useMemo, useState } from "preact/hooks";
 import { api, ResponseParseError } from "../api";
 import backSvg from "../assets/icons/back.svg?raw";
@@ -22,6 +23,7 @@ interface HistoryViewProps {
 
 export function HistoryView({ distanceUnit }: HistoryViewProps) {
     const { t } = useI18n();
+    const isAdmin = useAuth().role === "Admin";
     const navigate = useNavigate();
     const path = usePath();
     const [errors, errorStack] = useErrorStack();
@@ -212,7 +214,7 @@ export function HistoryView({ distanceUnit }: HistoryViewProps) {
                                 type="button"
                                 class={`history-delete-all-btn${deleting ? " pending" : ""}`}
                                 onClick={() => setConfirmReset(true)}
-                                disabled={deleting}
+                                disabled={!isAdmin || deleting}
                             >
                                 <T>Delete all history</T>
                             </button>
@@ -262,7 +264,7 @@ export function HistoryView({ distanceUnit }: HistoryViewProps) {
                     <ConfirmDialog
                         message={t("Delete all map data?")}
                         confirmLabel={t("Delete")}
-                        disabled={deleting}
+                        disabled={!isAdmin || deleting}
                         onConfirm={() => {
                             setConfirmReset(false);
                             handleDeleteAll();

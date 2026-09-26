@@ -715,7 +715,9 @@ input:disabled {
     width: 42px;
 }
 
-.settings-page {
+.settings-page,
+.accounts-page {
+    min-height: 0;
     flex: 1;
     padding: 8px 20px;
     overflow-y: auto;
@@ -862,7 +864,8 @@ input:disabled {
     position: relative;
 }
 
-.settings-tz-select {
+.settings-tz-select,
+.account-card select {
     width: 100%;
     padding: 12px 16px;
     border: 1px solid var(--border);
@@ -1023,7 +1026,9 @@ input:disabled {
     color: var(--text);
 }
 
-.settings-toggle-desc {
+.settings-toggle-desc,
+.account-note,
+.account-card p {
     font-size: 12px;
     color: var(--text);
     opacity: 0.55;
@@ -1194,7 +1199,8 @@ input:disabled {
 
 /* Text input (hostname, etc.) */
 
-.settings-text-input {
+.settings-text-input,
+.account-card input:not([type="checkbox"]) {
     width: 100%;
     padding: 10px 12px;
     border: 1px solid var(--border);
@@ -1207,7 +1213,8 @@ input:disabled {
     box-sizing: border-box;
 }
 
-.settings-text-input:focus {
+.settings-text-input:focus,
+.account-card input:focus {
     outline: 2px solid var(--accent, #5ac8fa);
 }
 
@@ -1219,7 +1226,8 @@ input:disabled {
     align-items: stretch;
 }
 
-.settings-ntfy-row .settings-text-input {
+.settings-ntfy-row .settings-text-input,
+.account-card input:not([type="checkbox"]) {
     flex: 1;
     min-width: 0;
 }
@@ -3191,4 +3199,46 @@ input:disabled {
     .info-card-value {
         font-size: 28px;
     }
+}
+
+.account-card {
+    display: grid;
+    gap: 16px;
+    padding: 16px;
+    margin-bottom: 12px;
+    border: 1px solid var(--border);
+    border-radius: 16px;
+    background: var(--card-bg);
+}
+.account-card label {
+    display: grid;
+    gap: 8px;
+    font-size: 14px;
+}
+.account-card h1,
+.account-card h2 {
+    font-size: 16px;
+    font-weight: 600;
+}
+.account-note {
+    margin: 12px 0 20px;
+}
+.account-card .settings-toggle-row {
+    margin-bottom: 0;
+}
+.accounts-page > .settings-device-btn {
+    margin-bottom: 12px;
+}
+.accounts-page .settings-toggle-row {
+    gap: 16px;
+}
+.account-card button:disabled,
+.accounts-page .settings-toggle:disabled {
+    opacity: 0.4;
+}
+.account-actions {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 12px;
 }

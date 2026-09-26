@@ -1,3 +1,4 @@
+import { AccountsView } from "./auth";
 import { useCallback, useEffect, useRef, useState } from "preact/hooks";
 import { api } from "./api";
 import { Route, Router } from "./components/router";
@@ -157,6 +158,9 @@ export function App() {
     return (
         <I18nProvider preference={language} locale={locale} setPreference={setLanguage}>
             <Router>
+                <Route path="/settings/accounts">
+                    <AccountsView />
+                </Route>
                 <Route path="/">
                     <DashboardView
                         firmware={firmware}

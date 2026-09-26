@@ -4,6 +4,7 @@ from homeassistant.components.vacuum import VacuumActivity
 
 DOMAIN = "openneato"
 CONF_HOST = "host"
+CONF_API_KEY = "api_key"
 DEFAULT_POLL_INTERVAL = 5  # seconds
 
 # ── Floorplan background (history map camera) ──────────────────────────────

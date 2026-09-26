@@ -10,14 +10,15 @@ from homeassistant.components.http import StaticPathConfig
 from homeassistant.config_entries import ConfigEntry
 from homeassistant.const import Platform
 from homeassistant.core import HomeAssistant
-from homeassistant.exceptions import ConfigEntryNotReady
+from homeassistant.exceptions import ConfigEntryAuthFailed, ConfigEntryNotReady
 from homeassistant.helpers.aiohttp_client import async_get_clientsession
 from homeassistant.loader import async_get_integration
 
 from . import websocket
-from .api import OpenNeatoApiClient, OpenNeatoConnectionError
+from .api import OpenNeatoApiClient, OpenNeatoAuthError, OpenNeatoPermissionError, OpenNeatoConnectionError
 from .const import (
     CONF_HOST,
+    CONF_API_KEY,
     CONF_MAP_ENABLED,
     DOMAIN,
     MAP_DEFAULT_ENABLED,
@@ -58,14 +59,21 @@ PLATFORMS: list[Platform] = [
 
 async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
     """Set up OpenNeato from a config entry."""
+    # Discard credentials saved by the earlier password-based integration.
+    if "username" in entry.data or "password" in entry.data:
+        hass.config_entries.async_update_entry(
+            entry, data={key: value for key, value in entry.data.items() if key not in ("username", "password")}
+        )
     host = entry.data[CONF_HOST]
     session = async_get_clientsession(hass)
-    api = OpenNeatoApiClient(host, session)
+    api = OpenNeatoApiClient(host, session, entry.data.get(CONF_API_KEY, ""))
 
     _LOGGER.debug("Connecting to OpenNeato at %s", host)
     try:
         firmware_info = await api.get_firmware_version()
         robot_info = await api.get_robot_version()
+    except (OpenNeatoAuthError, OpenNeatoPermissionError) as err:
+        raise ConfigEntryAuthFailed(str(err)) from err
     except OpenNeatoConnectionError as err:
         _LOGGER.warning("Cannot connect to OpenNeato at %s: %s", host, err)
         raise ConfigEntryNotReady(

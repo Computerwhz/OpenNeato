@@ -1,3 +1,4 @@
+import { useAuth } from "../../auth";
 import { useCallback, useRef, useState } from "preact/hooks";
 import { api } from "../../api";
 import boltSvg from "../../assets/icons/bolt.svg?raw";
@@ -35,6 +36,7 @@ function SessionCard({
     distanceUnit,
 }: SessionCardProps) {
     const { t, formatDateTime, formatDuration, formatNumber } = useI18n();
+    const isAdmin = useAuth().role === "Admin";
     const info = modeInfo(session?.mode ?? "");
     return (
         <div class={`history-session-row${active ? " running" : ""}`}>
@@ -71,7 +73,7 @@ function SessionCard({
                 </div>
                 <span class="history-session-chevron">&rsaquo;</span>
             </button>
-            {!active && (
+            {!active && isAdmin && (
                 <a
                     class="history-session-download"
                     href={`/api/history/${filename}`}
@@ -81,7 +83,7 @@ function SessionCard({
                     <Icon svg={downloadSvg} />
                 </a>
             )}
-            {!active && (
+            {!active && isAdmin && (
                 <button
                     type="button"
                     class="history-session-delete"
@@ -121,6 +123,7 @@ export function HistoryListView({
     distanceUnit,
 }: HistoryListViewProps) {
     const { t } = useI18n();
+    const isAdmin = useAuth().role === "Admin";
     const [confirmTarget, setConfirmTarget] = useState<string | null>(null);
     const [importStatus, setImportStatus] = useState<ImportStatus>("idle");
     const fileInputRef = useRef<HTMLInputElement>(null);
@@ -210,7 +213,7 @@ export function HistoryListView({
                             type="file"
                             accept=".jsonl"
                             class="history-import-input"
-                            disabled={importStatus === "uploading"}
+                            disabled={!isAdmin || importStatus === "uploading"}
                             onChange={(e) => {
                                 const f = (e.target as HTMLInputElement).files?.[0];
                                 if (f) handleImportFile(f);
@@ -230,7 +233,7 @@ export function HistoryListView({
                         type="button"
                         class={`history-delete-all-btn${deleting ? " pending" : ""}`}
                         onClick={() => setConfirmTarget("__all__")}
-                        disabled={deleting}
+                        disabled={!isAdmin || deleting}
                     >
                         <T>Delete All</T>
                     </button>
@@ -262,7 +265,7 @@ export function HistoryListView({
                 <ConfirmDialog
                     message={t(confirmTarget === "__all__" ? "Delete all map data?" : "Delete this session?")}
                     confirmLabel={t("Delete")}
-                    disabled={deleting}
+                    disabled={!isAdmin || deleting}
                     onConfirm={handleConfirmDelete}
                     onCancel={() => setConfirmTarget(null)}
                 />

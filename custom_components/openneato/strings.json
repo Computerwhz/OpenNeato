@@ -3,18 +3,40 @@
     "step": {
       "user": {
         "title": "Connect to OpenNeato",
-        "description": "Enter the IP address or hostname of your OpenNeato robot.",
+        "description": "Enter the host of your OpenNeato robot. When login is enabled, enter the Home Assistant API key generated in Settings > Accounts. Leave the key blank when login is off. Re-enter your key when reconfiguring; a blank field removes the saved key.",
         "data": {
-          "host": "Host"
+          "host": "Host",
+          "api_key": "API key"
+        }
+      },
+      "reconfigure": {
+        "title": "Reconfigure OpenNeato",
+        "description": "Enter the host of your OpenNeato robot. When login is enabled, enter the Home Assistant API key generated in Settings > Accounts. Leave the key blank when login is off. Re-enter your key when reconfiguring; a blank field removes the saved key.",
+        "data": {
+          "host": "Host",
+          "api_key": "API key"
+        }
+      },
+      "reauth_confirm": {
+        "title": "Update OpenNeato API key",
+        "description": "Enter the host of your OpenNeato robot. When login is enabled, enter the Home Assistant API key generated in Settings > Accounts. Leave the key blank when login is off. Re-enter your key when reconfiguring; a blank field removes the saved key.",
+        "data": {
+          "host": "Host",
+          "api_key": "API key"
         }
       }
     },
     "error": {
       "cannot_connect": "Unable to connect to the robot. Please check the host and try again.",
-      "unknown": "An unexpected error occurred."
+      "unknown": "An unexpected error occurred.",
+      "invalid_auth": "Enter a valid Home Assistant API key from OpenNeato Settings > Accounts.",
+      "insufficient_permissions": "This operation is unavailable. Check the API key and connect through normal Wi-Fi, not the recovery access point.",
+      "wrong_device": "This host belongs to a different robot."
     },
     "abort": {
-      "already_configured": "This robot is already configured."
+      "already_configured": "This robot is already configured.",
+      "reauth_successful": "Authentication updated successfully.",
+      "reconfigure_successful": "Configuration updated successfully."
     }
   },
   "entity": {

@@ -6,7 +6,8 @@ import json
 import logging
 import re
 from asyncio import Task, ensure_future
-from typing import Any
+from typing import Any, AsyncIterator
+from contextlib import asynccontextmanager
 
 import aiohttp
 from asyncio import timeout
@@ -30,6 +31,14 @@ class OpenNeatoApiError(HomeAssistantError):
     """Error to indicate a non-connection API failure."""
 
 
+class OpenNeatoAuthError(OpenNeatoApiError):
+    """Credentials are missing or no longer valid."""
+
+
+class OpenNeatoPermissionError(OpenNeatoApiError):
+    """The account lacks permission for this operation."""
+
+
 async def _read_json(response: aiohttp.ClientResponse) -> Any:
     """Read a response body and parse it as JSON, tolerating stray non-UTF-8 bytes.
 
@@ -46,10 +55,14 @@ async def _read_json(response: aiohttp.ClientResponse) -> Any:
 class OpenNeatoApiClient:
     """Async HTTP client for OpenNeato."""
 
-    def __init__(self, host: str, session: aiohttp.ClientSession) -> None:
+    def __init__(
+        self, host: str, session: aiohttp.ClientSession,
+        api_key: str = "",
+    ) -> None:
         """Initialize the API client."""
         self._host = host.rstrip("/")
         self._session = session
+        self._api_key = api_key
         self._base_url = f"http://{self._host}"
         # Coalesces concurrent get_history_session() calls for the same
         # filename into a single in-flight request. Both camera entities
@@ -73,13 +86,35 @@ class OpenNeatoApiClient:
         """Return the aiohttp session."""
         return self._session
 
+    @staticmethod
+    def _check_status(response: aiohttp.ClientResponse) -> None:
+        if response.status == 401:
+            raise OpenNeatoAuthError("Home Assistant API key is missing or invalid")
+        if response.status == 403:
+            raise OpenNeatoPermissionError("Home Assistant API key does not permit this operation")
+        if 300 <= response.status < 400:
+            raise OpenNeatoApiError("Unexpected redirect from OpenNeato")
+        response.raise_for_status()
+
+    @asynccontextmanager
+    async def _request(self, method: str, url: str, **kwargs: Any) -> AsyncIterator[aiohttp.ClientResponse]:
+        """Send the optional device API key without session login or retries."""
+        headers = {"X-OpenNeato": "1"}
+        if self._api_key:
+            headers["Authorization"] = f"Bearer {self._api_key}"
+        async with self._session.request(
+            method, url, headers=headers, allow_redirects=False, **kwargs
+        ) as response:
+            self._check_status(response)
+            yield response
+
     async def _get(self, path: str) -> dict[str, Any]:
         """Perform a GET request and return parsed JSON."""
         url = f"{self._base_url}{path}"
         _LOGGER.debug("GET %s", url)
         try:
             async with timeout(TIMEOUT):
-                async with self._session.get(url) as response:
+                async with self._request("GET", url) as response:
                     _LOGGER.debug(
                         "GET %s -> %s (%s)",
                         path, response.status, response.content_type,
@@ -110,7 +145,7 @@ class OpenNeatoApiClient:
         _LOGGER.debug("POST %s params=%s", url, params)
         try:
             async with timeout(TIMEOUT):
-                async with self._session.post(url, params=params) as response:
+                async with self._request("POST", url, params=params) as response:
                     _LOGGER.debug(
                         "POST %s -> %s (%s)",
                         path, response.status, response.content_type,
@@ -152,7 +187,7 @@ class OpenNeatoApiClient:
         _LOGGER.debug("DELETE %s", url)
         try:
             async with timeout(TIMEOUT):
-                async with self._session.delete(url) as response:
+                async with self._request("DELETE", url) as response:
                     _LOGGER.debug("DELETE %s -> %s", url, response.status)
                     response.raise_for_status()
         except aiohttp.ClientConnectionError as err:
@@ -178,7 +213,7 @@ class OpenNeatoApiClient:
         _LOGGER.debug("PUT %s body=%s", url, json_data)
         try:
             async with timeout(TIMEOUT):
-                async with self._session.put(url, json=json_data) as response:
+                async with self._request("PUT", url, json=json_data) as response:
                     _LOGGER.debug(
                         "PUT %s -> %s (%s)",
                         path, response.status, response.content_type,
@@ -207,7 +242,7 @@ class OpenNeatoApiClient:
         _LOGGER.debug("DELETE %s", url)
         try:
             async with timeout(TIMEOUT):
-                async with self._session.delete(url) as response:
+                async with self._request("DELETE", url) as response:
                     _LOGGER.debug(
                         "DELETE %s -> %s (%s)",
                         path, response.status, response.content_type,
@@ -336,7 +371,7 @@ class OpenNeatoApiClient:
         _LOGGER.debug("GET %s", url)
         try:
             async with timeout(TIMEOUT):
-                async with self._session.get(url) as response:
+                async with self._request("GET", url) as response:
                     response.raise_for_status()
                     # The firmware serves this endpoint as an HTTP chunked
                     # transfer with no Content-Length (beginChunkedResponse

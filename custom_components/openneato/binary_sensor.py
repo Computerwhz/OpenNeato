@@ -15,6 +15,7 @@ from homeassistant.core import HomeAssistant
 from homeassistant.helpers.entity_platform import AddEntitiesCallback
 from homeassistant.helpers.update_coordinator import DataUpdateCoordinator
 
+from typing import Any
 from .const import DOMAIN
 from .entity import OpenNeatoEntity
 
@@ -25,6 +26,22 @@ class OpenNeatoBinarySensorEntityDescription(BinarySensorEntityDescription):
 
     section: str = ""
     field: str = ""
+    value_fn: Any = None
+
+def _ui_code(data: Any) -> int | None:
+    """Return the current UI alert/error code."""
+    try:
+        return int(data.get("errorCode"))
+    except (AttributeError, TypeError, ValueError):
+        return None
+
+
+def _has_alert(data: Any) -> bool:
+    return bool(data.get("hasError")) and data.get("kind") == "warning"
+
+
+def _has_error(data: Any) -> bool:
+    return bool(data.get("hasError")) and data.get("kind") == "error"
 
 
 BINARY_SENSOR_DESCRIPTIONS: tuple[OpenNeatoBinarySensorEntityDescription, ...] = (
@@ -72,13 +89,25 @@ BINARY_SENSOR_DESCRIPTIONS: tuple[OpenNeatoBinarySensorEntityDescription, ...] =
         device_class=BinarySensorDeviceClass.BATTERY,
         entity_category=EntityCategory.DIAGNOSTIC,
     ),
+    # ── Alert ───────────────────────────────────────────────────────────
+    OpenNeatoBinarySensorEntityDescription(
+        key="error_has_alert",
+        translation_key="alert",
+        name="Alert",
+        section="error",
+        field="",
+        value_fn=_has_alert,
+        device_class=BinarySensorDeviceClass.PROBLEM,
+    ),
+
     # ── Error ───────────────────────────────────────────────────────────
     OpenNeatoBinarySensorEntityDescription(
         key="error_has_error",
         translation_key="error",
         name="Error",
         section="error",
-        field="hasError",
+        field="",
+        value_fn=_has_error,
         device_class=BinarySensorDeviceClass.PROBLEM,
     ),
     # ── System ──────────────────────────────────────────────────────────
@@ -196,14 +225,26 @@ class OpenNeatoBinarySensor(OpenNeatoEntity, BinarySensorEntity):
         """Return true if the binary sensor is on."""
         if self.coordinator.data is None:
             return None
+
         section_data = self.coordinator.data.get(
             self.entity_description.section, {}
         )
+
+        if self.entity_description.value_fn is not None:
+            if self.entity_description.field:
+                return bool(
+                    self.entity_description.value_fn(
+                        section_data.get(self.entity_description.field)
+                    )
+                )
+
+            return bool(self.entity_description.value_fn(section_data))
+
         value = section_data.get(self.entity_description.field)
         if value is None:
             return None
-        return bool(value)
 
+        return bool(value)
 
 async def async_setup_entry(
     hass: HomeAssistant,
